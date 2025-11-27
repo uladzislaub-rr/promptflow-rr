@@ -43,6 +43,7 @@ def llm(
     tools: list = None,
     response_format: object = None,
     seed: int = None,
+    service_tier: str = None,
     suffix: str = None,
     logprobs: int = None,
     echo: bool = False,
@@ -104,6 +105,7 @@ def llm(
                 logprobs=logprobs,
                 echo=echo,
                 best_of=best_of,
+                service_tier=service_tier,
                 **kwargs
             )
         else:
@@ -122,6 +124,7 @@ def llm(
                 tools=tools,
                 response_format=response_format,
                 seed=seed,
+                service_tier=service_tier,
                 **kwargs
             )
     else:

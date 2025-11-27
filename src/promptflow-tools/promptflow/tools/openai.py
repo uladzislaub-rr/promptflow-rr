@@ -47,32 +47,34 @@ class OpenAI(ToolProvider):
         best_of: int = 1,
         logit_bias: dict = {},
         user: str = "",
+        service_tier: str = None,
         **kwargs,
     ):
         prompt = render_jinja_template(prompt, trim_blocks=True, keep_trailing_newline=True, **kwargs)
         # TODO: remove below type conversion after client can pass json rather than string.
         echo = to_bool(echo)
         stream = to_bool(stream)
-        response = self._client.completions.create(
-            prompt=prompt,
-            model=model.value if isinstance(model, Enum) else model,
-            # empty string suffix should be treated as None.
-            suffix=suffix if suffix else None,
-            max_tokens=int(max_tokens) if max_tokens is not None else None,
-            temperature=float(temperature),
-            top_p=float(top_p),
-            n=int(n),
-            stream=stream,
-            logprobs=int(logprobs) if logprobs else None,
-            echo=echo,
-            stop=stop if stop else None,
-            presence_penalty=float(presence_penalty) if presence_penalty is not None else None,
-            frequency_penalty=float(frequency_penalty) if frequency_penalty is not None else None,
-            best_of=int(best_of),
-            # Logit bias must be a dict if we passed it to openai api.
-            logit_bias=logit_bias if logit_bias else {},
-            user=user
-        )
+        params = {
+            "prompt": prompt,
+            "model": model.value if isinstance(model, Enum) else model,
+            "suffix": suffix if suffix else None,
+            "max_tokens": int(max_tokens) if max_tokens is not None else None,
+            "temperature": float(temperature),
+            "top_p": float(top_p),
+            "n": int(n),
+            "stream": stream,
+            "logprobs": int(logprobs) if logprobs else None,
+            "echo": echo,
+            "stop": stop if stop else None,
+            "presence_penalty": float(presence_penalty) if presence_penalty is not None else None,
+            "frequency_penalty": float(frequency_penalty) if frequency_penalty is not None else None,
+            "best_of": int(best_of),
+            "logit_bias": logit_bias if logit_bias else {},
+            "user": user
+        }
+        if service_tier is not None:
+            params["service_tier"] = service_tier
+        response = self._client.completions.create(**params)
 
         if stream:
             def generator():
@@ -111,6 +113,7 @@ class OpenAI(ToolProvider):
         tools: list = None,
         response_format: object = None,
         seed: int = None,
+        service_tier: str = None,
         **kwargs
     ):
         messages = build_messages(prompt, **kwargs)
@@ -147,6 +150,8 @@ class OpenAI(ToolProvider):
             params["response_format"] = response_format
         if seed is not None:
             params["seed"] = seed
+        if service_tier is not None:
+            params["service_tier"] = service_tier
         if presence_penalty is not None:
             params["presence_penalty"] = presence_penalty
         if frequency_penalty is not None:
@@ -180,6 +185,7 @@ def completion(
     best_of: int = 1,
     logit_bias: dict = {},
     user: str = "",
+    service_tier: str = None,
     **kwargs
 ):
     return OpenAI(connection).completion(
@@ -199,6 +205,7 @@ def completion(
         best_of=best_of,
         logit_bias=logit_bias,
         user=user,
+        service_tier=service_tier,
         **kwargs,
     )
 
@@ -223,6 +230,7 @@ def chat(
     tools: list = None,
     response_format: object = None,
     seed: int = None,
+    service_tier: str = None,
     **kwargs
 ):
     return OpenAI(connection).chat(
@@ -243,5 +251,6 @@ def chat(
         tools=tools,
         response_format=response_format,
         seed=seed,
+        service_tier=service_tier,
         **kwargs,
     )
