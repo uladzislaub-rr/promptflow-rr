@@ -17,10 +17,11 @@ from promptflow._core.flow_execution_context import FlowExecutionContext
 from promptflow._core.tools_manager import ToolsManager
 from promptflow._utils.logger_utils import flow_logger
 from promptflow._utils.thread_utils import ThreadWithContextVars
-from promptflow._utils.utils import extract_user_frame_summaries, set_context, try_get_long_running_logging_interval
+from promptflow._utils.utils import extract_user_frame_summaries, get_int_env_var, set_context, try_get_long_running_logging_interval
 from promptflow.contracts.flow import Node
 from promptflow.executor._dag_manager import DAGManager
-from promptflow.executor._errors import LineExecutionTimeoutError, NoNodeExecutedError
+from promptflow.executor._errors import InvalidNodeConcurrencyError, LineExecutionTimeoutError, NoNodeExecutedError
+from promptflow.executor._flow_nodes_scheduler import DEFAULT_CONCURRENCY_FLOW
 
 PF_ASYNC_NODE_SCHEDULER_EXECUTE_TASK_NAME = "_pf_async_nodes_scheduler.execute"
 DEFAULT_TASK_LOGGING_INTERVAL = 60
@@ -34,7 +35,17 @@ class AsyncNodesScheduler:
         node_concurrency: int,
     ) -> None:
         self._tools_manager = tools_manager
-        self._node_concurrency = node_concurrency
+        _raw = os.environ.get("PF_NODE_CONCURRENCY")
+        if _raw is not None:
+            _cap = get_int_env_var("PF_NODE_CONCURRENCY")
+            if _cap is None or _cap <= 0:
+                raise InvalidNodeConcurrencyError(
+                    message_format="PF_NODE_CONCURRENCY must be a positive integer, got {value}.",
+                    value=_raw,
+                )
+        else:
+            _cap = DEFAULT_CONCURRENCY_FLOW
+        self._node_concurrency = min(node_concurrency, _cap)
         self._task_start_time = {}
         self._task_last_log_time = {}
         self._dag_manager_completed_event = threading.Event()

@@ -17,10 +17,10 @@ from promptflow._core.flow_execution_context import FlowExecutionContext
 from promptflow._core.tools_manager import ToolsManager
 from promptflow._utils.logger_utils import flow_logger
 from promptflow._utils.thread_utils import ThreadWithContextVars
-from promptflow._utils.utils import set_context
+from promptflow._utils.utils import get_int_env_var, set_context
 from promptflow.contracts.flow import Node
 from promptflow.executor._dag_manager import DAGManager
-from promptflow.executor._errors import LineExecutionTimeoutError, NoNodeExecutedError
+from promptflow.executor._errors import InvalidNodeConcurrencyError, LineExecutionTimeoutError, NoNodeExecutedError
 
 RUN_FLOW_NODES_LINEARLY = 1
 DEFAULT_CONCURRENCY_BULK = 2
@@ -65,7 +65,17 @@ class FlowNodesScheduler:
     ) -> None:
         self._tools_manager = tools_manager
         self._future_to_node: Dict[Future, Node] = {}
-        self._node_concurrency = min(node_concurrency, DEFAULT_CONCURRENCY_FLOW)
+        _raw = os.environ.get("PF_NODE_CONCURRENCY")
+        if _raw is not None:
+            _cap = get_int_env_var("PF_NODE_CONCURRENCY")
+            if _cap is None or _cap <= 0:
+                raise InvalidNodeConcurrencyError(
+                    message_format="PF_NODE_CONCURRENCY must be a positive integer, got {value}.",
+                    value=_raw,
+                )
+        else:
+            _cap = DEFAULT_CONCURRENCY_FLOW
+        self._node_concurrency = min(node_concurrency, _cap)
         flow_logger.info(f"Start to run {len(nodes_from_invoker)} nodes with concurrency level {node_concurrency}.")
         self._dag_manager = DAGManager(nodes_from_invoker, inputs)
         self._context = context

@@ -164,6 +164,10 @@ class NoNodeExecutedError(SystemErrorException):
     pass
 
 
+class InvalidNodeConcurrencyError(ValidationException):
+    pass
+
+
 class InputTypeError(InvalidFlowRequest):
     pass
 

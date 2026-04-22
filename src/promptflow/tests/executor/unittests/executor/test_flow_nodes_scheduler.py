@@ -1,12 +1,13 @@
 from concurrent.futures import Future
 from typing import Callable
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from promptflow._core.flow_execution_context import FlowExecutionContext
 from promptflow.contracts.flow import Node
 from promptflow.executor._dag_manager import DAGManager
+from promptflow.executor._errors import InvalidNodeConcurrencyError
 from promptflow.executor._flow_nodes_scheduler import (
     DEFAULT_CONCURRENCY_BULK,
     DEFAULT_CONCURRENCY_FLOW,
@@ -27,6 +28,22 @@ class TestFlowNodesScheduler:
     def test_maximun_concurrency(self):
         scheduler = FlowNodesScheduler(self.tools_manager, {}, [], 1000, self.context)
         assert scheduler._node_concurrency == DEFAULT_CONCURRENCY_FLOW
+
+    def test_node_concurrency_env_var_caps(self):
+        with patch.dict("os.environ", {"PF_NODE_CONCURRENCY": "8"}):
+            scheduler = FlowNodesScheduler(self.tools_manager, {}, [], 1000, self.context)
+            assert scheduler._node_concurrency == 8
+
+    def test_node_concurrency_env_var_allows_above_default(self):
+        with patch.dict("os.environ", {"PF_NODE_CONCURRENCY": "20"}):
+            scheduler = FlowNodesScheduler(self.tools_manager, {}, [], 1000, self.context)
+            assert scheduler._node_concurrency == 20
+
+    @pytest.mark.parametrize("invalid_value", ["abc", "0", "-1"])
+    def test_invalid_node_concurrency_env_var(self, invalid_value):
+        with patch.dict("os.environ", {"PF_NODE_CONCURRENCY": invalid_value}):
+            with pytest.raises(InvalidNodeConcurrencyError):
+                FlowNodesScheduler(self.tools_manager, {}, [], 1000, self.context)
 
     def test_collect_outputs(self):
         future1 = Future()
