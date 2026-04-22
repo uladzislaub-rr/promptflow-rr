@@ -67,16 +67,16 @@ class FlowNodesScheduler:
         self._future_to_node: Dict[Future, Node] = {}
         _raw = os.environ.get("PF_NODE_CONCURRENCY")
         if _raw is not None:
-            _cap = get_int_env_var("PF_NODE_CONCURRENCY")
-            if _cap is None or _cap <= 0:
+            _value = get_int_env_var("PF_NODE_CONCURRENCY")
+            if _value is None or _value <= 0:
                 raise InvalidNodeConcurrencyError(
                     message_format="PF_NODE_CONCURRENCY must be a positive integer, got {value}.",
                     value=_raw,
                 )
+            self._node_concurrency = _value
         else:
-            _cap = DEFAULT_CONCURRENCY_FLOW
-        self._node_concurrency = min(node_concurrency, _cap)
-        flow_logger.info(f"Start to run {len(nodes_from_invoker)} nodes with concurrency level {node_concurrency}.")
+            self._node_concurrency = min(node_concurrency, DEFAULT_CONCURRENCY_FLOW)
+        flow_logger.info(f"Start to run {len(nodes_from_invoker)} nodes with concurrency level {self._node_concurrency}.")
         self._dag_manager = DAGManager(nodes_from_invoker, inputs)
         self._context = context
 

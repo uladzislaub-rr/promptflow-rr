@@ -37,15 +37,15 @@ class AsyncNodesScheduler:
         self._tools_manager = tools_manager
         _raw = os.environ.get("PF_NODE_CONCURRENCY")
         if _raw is not None:
-            _cap = get_int_env_var("PF_NODE_CONCURRENCY")
-            if _cap is None or _cap <= 0:
+            _value = get_int_env_var("PF_NODE_CONCURRENCY")
+            if _value is None or _value <= 0:
                 raise InvalidNodeConcurrencyError(
                     message_format="PF_NODE_CONCURRENCY must be a positive integer, got {value}.",
                     value=_raw,
                 )
+            self._node_concurrency = _value
         else:
-            _cap = DEFAULT_CONCURRENCY_FLOW
-        self._node_concurrency = min(node_concurrency, _cap)
+            self._node_concurrency = min(node_concurrency, DEFAULT_CONCURRENCY_FLOW)
         self._task_start_time = {}
         self._task_last_log_time = {}
         self._dag_manager_completed_event = threading.Event()

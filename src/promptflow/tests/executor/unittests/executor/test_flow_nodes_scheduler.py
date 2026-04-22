@@ -29,10 +29,13 @@ class TestFlowNodesScheduler:
         scheduler = FlowNodesScheduler(self.tools_manager, {}, [], 1000, self.context)
         assert scheduler._node_concurrency == DEFAULT_CONCURRENCY_FLOW
 
-    def test_node_concurrency_env_var_caps(self):
+    def test_node_concurrency_env_var_overrides(self):
+        # env var wins regardless of what node_concurrency the caller passes
         with patch.dict("os.environ", {"PF_NODE_CONCURRENCY": "8"}):
-            scheduler = FlowNodesScheduler(self.tools_manager, {}, [], 1000, self.context)
-            assert scheduler._node_concurrency == 8
+            scheduler_low = FlowNodesScheduler(self.tools_manager, {}, [], 4, self.context)
+            assert scheduler_low._node_concurrency == 8
+            scheduler_high = FlowNodesScheduler(self.tools_manager, {}, [], 1000, self.context)
+            assert scheduler_high._node_concurrency == 8
 
     def test_node_concurrency_env_var_allows_above_default(self):
         with patch.dict("os.environ", {"PF_NODE_CONCURRENCY": "20"}):
